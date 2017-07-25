@@ -528,6 +528,29 @@ public abstract class Agent {
     }
     
     /**
+     * Takes in agent's sensor data and returns data from random sensors in state in an array
+     * @param sensors
+     * @return random output from state
+     */
+    protected boolean[] getSensorOutput(boolean[] sensors) {
+    	boolean[] sensorOutput = new boolean[sensors.length - 2];
+    	
+    	for (int i = 0; i < sensorOutput.length; i++){
+    		sensorOutput[i] = sensors[i + 2];
+    	}
+    	
+    	return sensorOutput;
+    }
+    
+    protected void setSensorOutputRandom(boolean[] output) {
+    	for (int i = 0; i < output.length; i++){
+    		output[i] = false;
+    		if (Math.random() > .5)
+    			output[i] = true;
+    	}
+    }
+    
+    /**
      * Returns the index of the given character in the
      *
      * array
@@ -563,10 +586,15 @@ public abstract class Agent {
             //index indicated by 'i'
             char currCmd = episodicMemory.get(indexOfMatchingAction).command;
             int currSensors = episodicMemory.get(indexOfMatchingAction).sensorValue;
+            
             char prevCmd = episodicMemory.get(i).command;
             int prevSensors = episodicMemory.get(i).sensorValue;
+            
+            boolean[] prevStateOutput = episodicMemory.get(i).stateSensorOutput;
+            double percentMatching = episodicMemory.get(indexOfMatchingAction).getPercentSensorsMatching(prevStateOutput);
+           
 
-            match = ( (currCmd == prevCmd) && (currSensors == prevSensors) );
+            match = ( (currCmd == prevCmd) && (currSensors == prevSensors) ) && percentMatching > .9;
 
             if (match) {
                 length++;

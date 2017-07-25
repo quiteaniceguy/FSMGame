@@ -20,7 +20,7 @@ public class MaRzAgent extends Agent
 
 	// the likeliness to jump back to another node
 	// (should be in the range (0.0 - 1.0)
-	public static double G_WEIGHT = 0.1;
+	public static double G_WEIGHT = 0.05;
 
 	// max size of list of nodes
 	public static final int NODE_LIST_SIZE = 100000;
@@ -217,7 +217,7 @@ public class MaRzAgent extends Agent
 			//System.out.println(nextSeqToTry);
 			
 			// Erase worst node in the hashFringe once we hit our Constant limit(rarely happens)
-			System.out.println(activeNode.suffix);
+			//System.out.println(activeNode.suffix);
 			
 			while (hashFringe.size() > NODE_LIST_SIZE)
 			{

@@ -35,6 +35,10 @@ public class NSMAgent extends Agent {
         public QEpisode(char cmd, int sensor) {
             super(cmd, sensor);
         }
+        
+        public QEpisode(char cmd, int sensor, boolean[] stateSensorOutput){
+        	super(cmd, sensor, stateSensorOutput);
+        }
     }//class QEpisode
     
     /**
@@ -48,16 +52,22 @@ public class NSMAgent extends Agent {
         public int end;  // index of the last episode of the sequence
         public int begin; // index of the first episode of the sequence
         public int len;  //length of the sequence
+        public double hValue; //heuristic value
 
-        public NBor(int initEnd, int initLen) {
+        public NBor(int initEnd, int initLen, double hValue) {
             this.begin = initEnd - initLen;
             this.end = initEnd;
             this.len = initLen;
+            this.hValue = hValue;
         }
 
         /** this allows a collection of NBors to be sorted on length */
         public int compareTo(NBor other) {
-            return this.len - other.len;
+        	int returnValue = 0;
+        	if (this.hValue > other.hValue) returnValue = 1;
+        	if (this.hValue < other.hValue) returnValue = -1;
+        	
+            return returnValue;
         }
     }//class NBor
     
@@ -119,6 +129,9 @@ public class NSMAgent extends Agent {
     protected NHood[] nhoods;
     protected double randChance = INIT_RAND_CHANCE;  //how frequently the agent
                                                      //make a random move
+    //delete
+    
+    
     /**
      * ************************************************************************************
      * METHODS 
@@ -145,6 +158,7 @@ public class NSMAgent extends Agent {
      * store.
      */
     public void populateNHoods() {
+
         QEpisode ep = (QEpisode)episodicMemory.get(episodicMemory.size() - 1);
 
         //Create a new neighborhood for each command
@@ -155,16 +169,43 @@ public class NSMAgent extends Agent {
             //temporarily set the to-be-issued command to this value
             ep.command = alphabet[c];
             episodicMemory.set(episodicMemory.size() - 1, ep);
-
+            
+            
+            
             //find the kNN 
             for(int i = 0; i <= episodicMemory.size() - 2; ++i) {
                 int matchLen = matchedMemoryStringLength(i);
-                if ( (matchLen >0) &&
-                    ( (nhoods[c].shortest <= matchLen)
-                      || (nhoods[c].nbors.size() < nhoods[c].K_NEAREST) ) ) {
-                    nhoods[c].addNBor(new NBor(i, matchLen));
+                double percentSensorsMatch = 0;
+                double hValue;
+                /*
+                for(int j = 0; j < matchLen; j++)
+                	percentSensorsMatch += episodicMemory.get(episodicMemory.size() - 1 - j).getPercentSensorsMatching(episodicMemory.get(i - j).stateSensorOutput);
+         		
+                percentSensorsMatch /= matchLen;
+                */
+               
+                
+                
+                hValue = matchLen;
+                
+               
+                
+                if ( (hValue >0) &&
+                    ( (nhoods[c].shortest <= hValue) || (nhoods[c].nbors.size() < nhoods[c].K_NEAREST) ) ) {
+                    nhoods[c].addNBor(new NBor(i, matchLen, hValue));
+                    //System.out.println((double)(matchLen)/episodicMemory.size());
+                    
+                   
+                    
                 }
+                
             }//for
+            
+        
+        
+            
+           
+           
         }//for
     }//populateNHoods
 
@@ -264,11 +305,13 @@ public class NSMAgent extends Agent {
     @Override
     public void exploreEnvironment() {
         int prevSensors = 0; //what was sensed last time
-        
+        boolean[] prevStateSensorOutput = new boolean[StateMachineEnvironment.N_SENSORS]; //the sensors given from each state, used to identify the state
+        setSensorOutputRandom(prevStateSensorOutput);
+    
         while (episodicMemory.size() < MAX_EPISODES && Successes <= NUM_GOALS) { 
             //add an episode to represent the current moment
             char cmd = alphabet[random.nextInt(alphabet.length)];  //default is random for now
-            QEpisode nowEp = new QEpisode(cmd, prevSensors);
+            QEpisode nowEp = new QEpisode(cmd, prevSensors, prevStateSensorOutput);
             //Update the q-values for the previous iteration of this loop
             if (nhoods[0] != null) updateAllLittleQ(nowEp);
 			episodicMemory.add(nowEp);
@@ -293,11 +336,23 @@ public class NSMAgent extends Agent {
             
             //execute the command
             nowEp.command = cmd;
+            ///make random move
+            int i = random.nextInt(alphabet.length);
+            char randMove = alphabet[i];
+            /////
+            
             boolean[] sensors = env.tick(cmd);
-
             //Setup for next iteration
+            
+            
             prevSensors = encodeSensors(sensors);
+            prevStateSensorOutput = getSensorOutput(sensors);
+            
+
+           
+            
             if (sensors[IS_GOAL]){
+
                 nowEp.reward = REWARD_SUCCESS;
                 Successes++;
                 if (randChance > MIN_RAND_CHANCE)
@@ -375,12 +430,14 @@ public class NSMAgent extends Agent {
                 config += "MAX_EPISODES," + MAX_EPISODES + "\n";
                 config += "NUM_GOALS," + NUM_GOALS + "\n";
                 config += "NUM_MACHINES," + NUM_MACHINES + "\n";
+                config += "NUM_SENSORS," + StateMachineEnvironment.N_SENSORS + "\n"; 
+                config += "INITIAL SENSOR SETTING," + StateMachineEnvironment.CUR_INIT_SENSOR_SETTING + "\n";
                 config += "cmd line:,";
                 for(String s : args) config += s + ",";
                 config += "\n";
                 System.out.println(config);
                 csv.append(config);
-                informationRows += 14; //we just added 14 header rows to the csv
+                informationRows += 16; //we just added 16 header rows to the csv
                 
                 //header row
                 csv.append("Opt Path Len,EpMem Size,");

@@ -25,14 +25,22 @@ import java.util.TreeSet;
 public class StateMachineEnvironment {
 
 	// Instance variables
+	enum InitSensorSetting{
+		RANDOM,
+		ONEORZERO,
+		ALLSAME,
+	}
 	public static int NUM_STATES = 20;
 	public static int GOAL_STATE = NUM_STATES - 1;
 	public static int ALPHABET_SIZE = 3;  //this must be in the range [2,26]
+	
+	public final static int N_SENSORS = 10;
+	public final static InitSensorSetting CUR_INIT_SENSOR_SETTING = InitSensorSetting.ALLSAME;
         
-        //instance variables created for Will and Ashley's methods
-        public static double TRANSITIONS_PERCENT = 0.04; //must be at least .01. percent of transition table that will have a goal state transition
-        public static int MAX_TRANSITIONS_TO_GOAL = (int)(((NUM_STATES-1)*ALPHABET_SIZE)*TRANSITIONS_PERCENT);// IF ZERO, WILL BE CHANGED TO 1 in constructor
-        public int TRANSITIONS_DONE;
+    //instance variables created for Will and Ashley's methods
+    public static double TRANSITIONS_PERCENT = 0.04; //must be at least .01. percent of transition table that will have a goal state transition
+    public static int MAX_TRANSITIONS_TO_GOAL = (int)(((NUM_STATES-1)*ALPHABET_SIZE)*TRANSITIONS_PERCENT);// IF ZERO, WILL BE CHANGED TO 1 in constructor
+    public int TRANSITIONS_DONE;
 
 	 //These are used as indexes into the the sensor array
 	private static final int IS_NEW_STATE = 0;
@@ -40,6 +48,7 @@ public class StateMachineEnvironment {
 
 
 	private int[][] transition;  //transition table
+	private double[][] sensorOutputChance;
 	private char[] alphabet;
 	private String[] paths;  //the shortest path from each state to goal
 	public int currentState;
@@ -131,6 +140,32 @@ public class StateMachineEnvironment {
         transition = new int[NUM_STATES][alphabet.length];
         TRANSITIONS_DONE = 0;
         int charToTransition;
+        
+        sensorOutputChance = new double[NUM_STATES][N_SENSORS];
+        
+        for (int i = 0; i < NUM_STATES; i++){
+        	for (int j = 0; j < N_SENSORS; j++){
+        		
+        		switch(CUR_INIT_SENSOR_SETTING){
+        		case ONEORZERO:
+        			double p = .01;
+            		if (Math.random() > .50)
+            			p = .99;
+            		sensorOutputChance[i][j] = p;
+            		break;
+            		
+        		case ALLSAME:
+        			sensorOutputChance[i][j] = .5;
+        			break;
+        		
+        		case RANDOM:
+        			sensorOutputChance[i][j] = Math.random();
+        			break;
+        		}
+        		
+        		
+        	}
+        }
 
         //Initialize all the values to -1 so we can tell if there's a transition
         //there or not (since 0 is a valid state to transition to, and the array
@@ -272,7 +307,12 @@ public class StateMachineEnvironment {
 		// An array of booleans to keep track of the agents
 		// two sensors. The first represents if he is in a new
 		// state and the second represents if he is at the goal
-		boolean[] sensors = {false, false};
+		
+		//boolean[] sensors = {false, false};
+		boolean[] sensors = new boolean[2 + N_SENSORS];
+		sensors[0] = false;
+		sensors[1] = false;
+		
 		int newState = transition[currentState][findAlphabetIndex(move)];
 		
 		// If the attempted letter brings us to a new state
@@ -286,6 +326,16 @@ public class StateMachineEnvironment {
 		if(newState == GOAL_STATE){
 			sensors[IS_GOAL] = true;
 			reset();
+		}
+		
+		
+		///return true or false according to the chance of true defined in sensorOutputChance
+		for(int i = 0; i < N_SENSORS; i++){
+			sensors[2 + i] = false;
+			//sensorOutputChance[newState][i]
+			if(Math.random() < sensorOutputChance[newState][i] ){
+				sensors[2 + i] = true;
+			}
 		}
 		
 		return sensors;
